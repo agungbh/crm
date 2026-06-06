@@ -113,16 +113,23 @@ if (count($conditions) > 0) {
 $result = mysqli_query($conn, $query_master);
 $total_rows = mysqli_num_rows($result);
 
-// --- AGREGASI RESOURCE DATA UNTUK VARIABEL BAGAN ---
+// --- AGREGASI RESOURCE DATA UNTUK VARIABEL BAGAN MARKETING (FIXED SUM SPASI GANDA) ---
 function getChartData($conn, $field, $conditions, $additional_where = "", $limit = "") {
     $where = "WHERE t1.id = (SELECT MAX(t2.id) FROM tabel_quisoner t2 WHERE t2.nim = t1.nim)";
     if (count($conditions) > 0) { $where .= " AND " . implode(' AND ', $conditions); }
     if ($additional_where != "") { $where .= " AND " . $additional_where; }
     
-    $query = "SELECT t1.$field as label, COUNT(*) as jumlah 
+    // FIX: Jika field adalah sekolah, lebur variasi spasi ganda ketikan maba menjadi single space
+    if ($field === 'sekolah') {
+        $select_field = "TRIM(REPLACE(REPLACE(REPLACE(t1.sekolah, '    ', ' '), '   ', ' '), '  ', ' '))";
+    } else {
+        $select_field = "t1.$field";
+    }
+    
+    $query = "SELECT $select_field as label, COUNT(*) as jumlah 
               FROM tabel_quisoner t1 
               $where 
-              GROUP BY t1.$field 
+              GROUP BY label 
               ORDER BY jumlah DESC $limit";
     return mysqli_query($conn, $query);
 }
@@ -136,15 +143,20 @@ $chart_mengetahui = getChartData($conn, "mengetahui_ubsi", $conditions);
 $chart_minat      = getChartData($conn, "minat_kompetensi", $conditions);
 $chart_organisasi = getChartData($conn, "aktivitas_organisasi", $conditions);
 
-// --- KOMPILASI DATA MODUS RESPONDEN UNTUK EVALUASI LOGIKA MARKETING ---
-$modus_tinggal = mysqli_fetch_assoc(mysqli_query($conn, "SELECT tempat_tinggal, COUNT(*) as jml FROM tabel_quisoner GROUP BY tempat_tinggal ORDER BY jml DESC LIMIT 1"))['tempat_tinggal'] ?? '-';
-$modus_sekolah = mysqli_fetch_assoc(mysqli_query($conn, "SELECT sekolah, COUNT(*) as jml FROM tabel_quisoner GROUP BY sekolah ORDER BY jml DESC LIMIT 1"))['sekolah'] ?? '-';
-$modus_beasiswa = mysqli_fetch_assoc(mysqli_query($conn, "SELECT beasiswa, COUNT(*) as jml FROM tabel_quisoner GROUP BY beasiswa ORDER BY jml DESC LIMIT 1"))['beasiswa'] ?? '-';
-$modus_jenis_b = mysqli_fetch_assoc(mysqli_query($conn, "SELECT jenis_beasiswa, COUNT(*) as jml FROM tabel_quisoner WHERE jenis_beasiswa IS NOT NULL GROUP BY jenis_beasiswa ORDER BY jml DESC LIMIT 1"))['jenis_beasiswa'] ?? 'Belum Terfokus';
-$modus_memilih = mysqli_fetch_assoc(mysqli_query($conn, "SELECT memilih_ubsi, COUNT(*) as jml FROM tabel_quisoner GROUP BY memilih_ubsi ORDER BY jml DESC LIMIT 1"))['memilih_ubsi'] ?? '-';
-$modus_mengetahui = mysqli_fetch_assoc(mysqli_query($conn, "SELECT mengetahui_ubsi, COUNT(*) as jml FROM tabel_quisoner GROUP BY mengetahui_ubsi ORDER BY jml DESC LIMIT 1"))['mengetahui_ubsi'] ?? '-';
-$modus_minat = mysqli_fetch_assoc(mysqli_query($conn, "SELECT minat_kompetensi, COUNT(*) as jml FROM tabel_quisoner GROUP BY minat_kompetensi ORDER BY jml DESC LIMIT 1"))['minat_kompetensi'] ?? '-';
-$modus_organisasi = mysqli_fetch_assoc(mysqli_query($conn, "SELECT aktivitas_organisasi, COUNT(*) as jml FROM tabel_quisoner GROUP BY aktivitas_organisasi ORDER BY jml DESC LIMIT 1"))['aktivitas_organisasi'] ?? '-';
+// --- KOMPILASI DATA MODUS RESPONDEN SECARA DINAMIS (IKUT FILTER) ---
+$where_modus = "WHERE t1.id = (SELECT MAX(t2.id) FROM tabel_quisoner t2 WHERE t2.nim = t1.nim)";
+if (count($conditions) > 0) { 
+    $where_modus .= " AND " . implode(' AND ', $conditions); 
+}
+
+$modus_tinggal = mysqli_fetch_assoc(mysqli_query($conn, "SELECT t1.tempat_tinggal, COUNT(*) as jml FROM tabel_quisoner t1 $where_modus GROUP BY t1.tempat_tinggal ORDER BY jml DESC LIMIT 1"))['tempat_tinggal'] ?? '-';
+$modus_sekolah = mysqli_fetch_assoc(mysqli_query($conn, "SELECT TRIM(REPLACE(REPLACE(REPLACE(t1.sekolah, '    ', ' '), '   ', ' '), '  ', ' ')) as sch, COUNT(*) as jml FROM tabel_quisoner t1 $where_modus GROUP BY sch ORDER BY jml DESC LIMIT 1"))['sch'] ?? '-';
+$modus_beasiswa = mysqli_fetch_assoc(mysqli_query($conn, "SELECT t1.beasiswa, COUNT(*) as jml FROM tabel_quisoner t1 $where_modus GROUP BY t1.beasiswa ORDER BY jml DESC LIMIT 1"))['beasiswa'] ?? '-';
+$modus_jenis_b = mysqli_fetch_assoc(mysqli_query($conn, "SELECT t1.jenis_beasiswa, COUNT(*) as jml FROM tabel_quisoner t1 $where_modus AND t1.jenis_beasiswa IS NOT NULL GROUP BY t1.jenis_beasiswa ORDER BY jml DESC LIMIT 1"))['jenis_beasiswa'] ?? 'Belum Terfokus';
+$modus_memilih = mysqli_fetch_assoc(mysqli_query($conn, "SELECT t1.memilih_ubsi, COUNT(*) as jml FROM tabel_quisoner t1 $where_modus GROUP BY t1.memilih_ubsi ORDER BY jml DESC LIMIT 1"))['memilih_ubsi'] ?? '-';
+$modus_mengetahui = mysqli_fetch_assoc(mysqli_query($conn, "SELECT t1.mengetahui_ubsi, COUNT(*) as jml FROM tabel_quisoner t1 $where_modus GROUP BY t1.mengetahui_ubsi ORDER BY jml DESC LIMIT 1"))['mengetahui_ubsi'] ?? '-';
+$modus_minat = mysqli_fetch_assoc(mysqli_query($conn, "SELECT t1.minat_kompetensi, COUNT(*) as jml FROM tabel_quisoner t1 $where_modus GROUP BY t1.minat_kompetensi ORDER BY jml DESC LIMIT 1"))['minat_kompetensi'] ?? '-';
+$modus_organisasi = mysqli_fetch_assoc(mysqli_query($conn, "SELECT t1.aktivitas_organisasi, COUNT(*) as jml FROM tabel_quisoner t1 $where_modus GROUP BY t1.aktivitas_organisasi ORDER BY jml DESC LIMIT 1"))['aktivitas_organisasi'] ?? '-';
 
 // Dropdown filter data
 $opt_tinggal = mysqli_query($conn, "SELECT tempat_tinggal FROM tabel_quisoner GROUP BY tempat_tinggal");
@@ -159,7 +171,7 @@ $opt_organisasi = mysqli_query($conn, "SELECT aktivitas_organisasi FROM tabel_qu
 <html lang="id">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" style="content=width=device-width, initial-scale=1.0">
     <title>Panel Kelola Kuesioner PMB - UBSI Tasikmalaya</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
@@ -182,41 +194,41 @@ $opt_organisasi = mysqli_query($conn, "SELECT aktivitas_organisasi FROM tabel_qu
 </head>
 <body class="bg-light">
 
-<!-- NAVBAR UTAMA -->
 <nav class="navbar navbar-expand-lg navbar-dark bg-dark shadow-sm no-print">
     <div class="container-fluid px-4">
         <a class="navbar-brand fw-bold" href="#">Dashboard UBSI [<?= strtoupper($_SESSION['role']); ?>]</a>
         <div class="navbar-nav ms-auto">
-                <a class="nav-link active" href="index2.php">📊 Dashboard</a>
-                <a class="nav-link" href="crm.php">📋 Manajemen CR</a>
-                <a class="nav-link" href="hasil_crm.php">📈 Hasil & Analisis CRM</a>
-                <a class="nav-link" href="generate.php?p=bju" target="_blank">📈 Laporan Data BJU</a>
-                <a class="nav-link" href="data-kuesioner.php" target="_blank">📈 Laporan Empowering BJU</a>    
-            </div>
-            <a class="nav-link btn btn-danger btn-sm text-white ms-3 px-3" href="../logout.php">Logout</a>
+            <a class="nav-link active" href="index2.php">📊 Dashboard</a>
+            <a class="nav-link" href="crm.php">📋 Manajemen CR</a>
+            <a class="nav-link" href="hasil_crm.php">📈 Hasil & Analisis CRM</a>
+            <a class="nav-link" href="generate.php?p=bju" target="_blank">📈 Laporan Data BJU</a>
+            <a class="nav-link" href="data-kuesioner.php" target="_blank">📈 Laporan Empowering BJU</a>    
         </div>
+        <a class="nav-link btn btn-danger btn-sm text-white ms-3 px-3" href="../logout.php">Logout</a>
     </div>
 </nav>
 
 <div class="container-fluid my-4 px-4">
-    <!-- KOP INSTITUSI SURAT RESMI (Hanya Muncul Saat PDF/Print) -->
     <div class="d-none d-print-block text-center mb-3">
         <h4 class="fw-bold mb-0">UNIVERSITAS BINA SARANA INFORMATIKA KAMPUS TASIKMALAYA</h4>
         <h6 class="text-uppercase text-secondary fw-bold mb-1">Laporan Validasi Data Master Kuesioner & Intelijen PMB</h6>
         <hr style="border: 1.5px solid #000; opacity: 1; margin-top: 4px; margin-bottom: 10px;">
     </div>
 
-    <!-- STRUKTUR NAVIGASI MENU UTAMA (no-print) -->
     <ul class="nav nav-tabs mb-4 no-print">
-        <li class="nav-link p-0">
+        <li class="nav-item">
             <a class="nav-link <?= $tab == 'crud' ? 'active' : ''; ?>" href="data-kuesioner.php?tab=crud&f_tinggal=<?= $f_tinggal; ?>&f_sekolah=<?= urlencode($f_sekolah); ?>&f_beasiswa=<?= $f_beasiswa; ?>&f_jenis_b=<?= $f_jenis_b; ?>&f_memilih=<?= $f_memilih; ?>&f_mengetahui=<?= $f_mengetahui; ?>&f_minat=<?= $f_minat; ?>&f_organisasi=<?= $f_organisasi; ?>">📂 Data Kuesioner (CRUD)</a>
         </li>
-        <li class="nav-link p-0">
+        <li class="nav-item">
             <a class="nav-link <?= $tab == 'analisa' ? 'active' : ''; ?>" href="data-kuesioner.php?tab=analisa&f_tinggal=<?= $f_tinggal; ?>&f_sekolah=<?= urlencode($f_sekolah); ?>&f_beasiswa=<?= $f_beasiswa; ?>&f_jenis_b=<?= $f_jenis_b; ?>&f_memilih=<?= $f_memilih; ?>&f_mengetahui=<?= $f_mengetahui; ?>&f_minat=<?= $f_minat; ?>&f_organisasi=<?= $f_organisasi; ?>">📈 Analisa Marketing UBSI Tasik 2026</a>
         </li>
+        <?php if($_SESSION['role'] == 'admin') : ?>
+        <li class="nav-item">
+            <a class="nav-link bg-warning-subtle text-warning-emphasis fw-bold" href="data-kuesioner.php?action=backup" onclick="return confirm('Apakah Anda yakin ingin mengunduh file cadangan UTUH seluruh isi tabel kuesioner (.zip) sekarang?')">📦 Backup Database (.zip)</a>
+        </li>
+        <?php endif; ?>
     </ul>
 
-    <!-- BLOK OVERVIEW & PANEL FILTER MULTI-KATEGORI -->
     <div class="row g-3 mb-4 no-print">
         <div class="col-md-2">
             <div class="p-3 text-center total-badge shadow-sm d-flex flex-column justify-content-center h-100">
@@ -251,30 +263,6 @@ $opt_organisasi = mysqli_query($conn, "SELECT aktivitas_organisasi FROM tabel_qu
                                     <?php while($row = mysqli_fetch_assoc($opt_jenis_b)) : ?><option value="<?= $row['jenis_beasiswa']; ?>" <?= $f_jenis_b == $row['jenis_beasiswa']?'selected':''; ?>><?= $row['jenis_beasiswa']; ?></option><?php endwhile; ?>
                                 </select>
                             </div>
-                            <div class="col-md-3">
-                                <select name="f_memilih" class="form-select form-select-sm">
-                                    <option value="">-- Memilih UBSI --</option>
-                                    <?php while($row = mysqli_fetch_assoc($opt_memilih)) : ?><option value="<?= $row['memilih_ubsi']; ?>" <?= $f_memilih == $row['memilih_ubsi']?'selected':''; ?>><?= $row['memilih_ubsi']; ?></option><?php endwhile; ?>
-                                </select>
-                            </div>
-                            <div class="col-md-3">
-                                <select name="f_mengetahui" class="form-select form-select-sm">
-                                    <option value="">-- Mengetahui UBSI --</option>
-                                    <?php while($row = mysqli_fetch_assoc($opt_mengetahui)) : ?><option value="<?= $row['mengetahui_ubsi']; ?>" <?= $f_mengetahui == $row['mengetahui_ubsi']?'selected':''; ?>><?= $row['mengetahui_ubsi']; ?></option><?php endwhile; ?>
-                                </select>
-                            </div>
-                            <div class="col-md-3">
-                                <select name="f_minat" class="form-select form-select-sm">
-                                    <option value="">-- Minat Kompetensi --</option>
-                                    <?php while($row = mysqli_fetch_assoc($opt_minat)) : ?><option value="<?= $row['minat_kompetensi']; ?>" <?= $f_minat == $row['minat_kompetensi']?'selected':''; ?>><?= $row['minat_kompetensi']; ?></option><?php endwhile; ?>
-                                </select>
-                            </div>
-                            <div class="col-md-3">
-                                <select name="f_organisasi" class="form-select form-select-sm">
-                                    <option value="">-- Aktivitas Organisasi --</option>
-                                    <?php while($row = mysqli_fetch_assoc($opt_organisasi)) : ?><option value="<?= $row['aktivitas_organisasi']; ?>" <?= $f_organisasi == $row['aktivitas_organisasi']?'selected':''; ?>><?= $row['aktivitas_organisasi']; ?></option><?php endwhile; ?>
-                                </select>
-                            </div>
                         </div>
                         <div class="d-flex gap-2 justify-content-end">
                             <button type="submit" class="btn btn-primary btn-sm px-4 fw-bold">Terapkan Saringan</button>
@@ -286,17 +274,11 @@ $opt_organisasi = mysqli_query($conn, "SELECT aktivitas_organisasi FROM tabel_qu
         </div>
     </div>
 
-    <!-- ======================= INTERFACE MENU 1: DATA KUESIONER (CRUD TABEL) ======================= -->
     <?php if ($tab == 'crud'): ?>
     <div class="card shadow-sm border-0">
         <div class="card-header bg-primary text-white py-3 d-flex justify-content-between align-items-center">
-            <h5 class="mb-0 fw-bold">Master Data Master Kuesioner Mahasiswa UBSI Tasikmalaya 2026</h5>
+            <h5 class="mb-0 fw-bold">Master Data Master Kuesioner (Bebas Redundansi NIM)</h5>
             <div class="d-flex gap-2 no-print">
-                <!-- PANEL TOMBOL SINKRON: BACKUP DATABASE DALAM FORMAT ZIP SISI KIRI TOMBOL CETAK -->
-                <?php if($_SESSION['role'] == 'admin') : ?>
-                    <a href="index.php" class="btn btn-warning btn-sm fw-bold px-3 shadow-sm" style="color:#212529;"> TAMBAH DATA </a>
-                    <a href="data-kuesioner.php?action=backup" class="btn btn-warning btn-sm fw-bold px-3 shadow-sm" style="color:#212529;">📦 Backup Database (.zip)</a>
-                <?php endif; ?>
                 <button onclick="window.print()" class="btn btn-light btn-sm fw-bold px-3">🖨️ Cetak Rekap (PDF)</button>
             </div>
         </div>
@@ -325,8 +307,7 @@ $opt_organisasi = mysqli_query($conn, "SELECT aktivitas_organisasi FROM tabel_qu
                         <td><?= htmlspecialchars($row['aktivitas_organisasi']); ?></td>
                         <td class="text-center no-print">
                             <div class="d-flex gap-1 justify-content-center">
-                                
-                                <a href="edit2.php?nama=<?php echo urlencode($row['nama']); ?>&nim=<?php echo urlencode($row['nim']); ?>" class="btn btn-warning btn-sm py-0 px-2" style="font-size: 11px;">Edit</a>
+                                <a href="edit.php?nama=<?php echo urlencode($row['nama']); ?>&nim=<?php echo urlencode($row['nim']); ?>" class="btn btn-warning btn-sm py-0 px-2" style="font-size: 11px;">Edit</a>
                                 <?php if($_SESSION['role'] == 'admin') : ?>
                                     <a href="hapus.php?nama=<?php echo urlencode($row['nama']); ?>&nim=<?php echo urlencode($row['nim']); ?>" onclick="return confirm('Hapus permanen data responden NIM <?php echo htmlspecialchars($row['nim']); ?>?')" class="btn btn-danger btn-sm py-0 px-2" style="font-size: 11px;">Hapus</a>
                                 <?php endif; ?>
@@ -343,7 +324,6 @@ $opt_organisasi = mysqli_query($conn, "SELECT aktivitas_organisasi FROM tabel_qu
     <?php endif; ?>
 
 
-    <!-- ======================= INTERFACE MENU 2: ANALISA MARKETING UBSI TASIK 2026 ======================= -->
     <?php if ($tab == 'analisa'): ?>
     
     <div class="row g-3 mb-4">
@@ -484,29 +464,56 @@ $opt_organisasi = mysqli_query($conn, "SELECT aktivitas_organisasi FROM tabel_qu
         </div>
     </div>
 
-    <!-- KESIMPULAN GEMINI AI BERADA TEPAT DI BAWAH GRAFIK -->
     <div class="card shadow-sm border-0 kesimpulan-box p-4 mt-4 mb-3">
         <h5 class="fw-bold text-success mb-3">💡 EXECUTIVE SUMMARY & STRATEGIC MARKETING ANALYSIS (GEMINI AI REPORT)</h5>
-        <div class="row g-3" style="font-size: 12.5px; line-height: 1.6; color: #212529;">
+        
+        <div class="row g-3 border-bottom pb-3" style="font-size: 12.5px; line-height: 1.6; color: #212529;">
             <div class="col-md-6 border-end">
                 <p class="mb-2"><strong>1. Analisis Profil Kewilayahan & Sekolah Input:</strong><br>
-                Berdasarkan kompilasi grafik batasan di atas, peta demografi sebaran mahasiswa baru didominasi oleh pendaftar yang berdomisili di <u><b><?= $modus_tinggal; ?></b></u>, dengan penyerapan lulusan sekolah terpadat berasal dari <u><b><?= $modus_sekolah; ?></b></u>. Parameter wilayah ini direkomendasikan dikunci sebagai zona prioritas pertahanan marcom.</p>
+                Berdasarkan kompilasi grafik batasan di atas, peta demografi sebaran mahasiswa baru didominasi oleh pendaftar yang berdomisili di <u><b><?= htmlspecialchars($modus_tinggal); ?></b></u>, dengan penyerapan lulusan sekolah terpadat berasal dari <u><b><?= htmlspecialchars($modus_sekolah); ?></b></u>. Parameter wilayah ini direkomendasikan dikunci sebagai zona prioritas pertahanan marcom.</p>
                 
                 <p class="mb-0"><strong>2. Skema Insentif Pembiayaan & Pola Beasiswa:</strong><br>
-                Status penerimaan pendanaan pendidikan menunjukkan kecenderungan terbesar mahasiswa memilih opsi beasiswa <u><b><?= $modus_beasiswa; ?></b></u>, dengan program penunjang yang paling diminati tertuju pada skema <u><b><?= $modus_jenis_b; ?></b></u>. Penawaran insentif ini terbukti efektif menjadi pemicu utama pendaftaran maba.</p>
+                Status penerimaan pendanaan pendidikan menunjukkan kecenderungan terbesar mahasiswa memilih opsi beasiswa <u><b><?= htmlspecialchars($modus_beasiswa); ?></b></u>, dengan program penunjang yang paling diminati tertuju pada skema <u><b><?= htmlspecialchars($modus_jenis_b); ?></b></u>. Penawaran insentif ini terbukti efektif menjadi pemicu utama pendaftaran maba.</p>
             </div>
             <div class="col-md-6 ps-md-4">
                 <p class="mb-2"><strong>3. Penentu Komparatif & Kanal Informasi Unggulan:</strong><br>
-                Faktor penentu terbesar yang berhasil memikat ketertarikan mahasiswa memilih Universitas Bina Sarana Informatika bersandar pada alasan keunggulan <u><b><?= $modus_memilih; ?></b></u>. Sementara itu, jembatan publikasi informasi dengan daya penetrasi pesan paling efektif diraih oleh media <u><b><?= $modus_mengetahui; ?></b></u>.</p>
+                Faktor penentu terbesar yang berhasil memikat ketertarikan mahasiswa memilih Universitas Bina Sarana Informatika bersandar pada alasan keunggulan <u><b><?= htmlspecialchars($modus_memilih); ?></b></u>. Sementara itu, jembatan publikasi informasi dengan daya penetrasi pesan paling efektif diraih oleh media <u><b><?= htmlspecialchars($modus_mengetahui); ?></b></u>.</p>
                 
                 <p class="mb-0"><strong>4. Pemetaan Bakat Praktis & Kelompok Komunitas:</strong><br>
-                Karakteristik minat terbesar luaran pendaftar mengarah kuat pada sub-kompetensi digital kreatif yaitu <u><b><?= $modus_minat; ?></b></u>, yang berjalan selaras dengan keaktifan pada rumpun organisasi kelompok <u><b><?= $modus_organisasi; ?></b></u>. Kompilasi ini dapat dimanfaatkan pimpinan untuk merancang blueprint inkubasi bakat.</p>
+                Karakteristik minat terbesar luaran pendaftar mengarah kuat pada sub-kompetensi digital kreatif yaitu <u><b><?= htmlspecialchars($modus_minat); ?></b></u>, yang berjalan selaras dengan keaktifan pada rumpun organisasi kelompok <u><b><?= htmlspecialchars($modus_organisasi); ?></b></u>. Kompilasi ini dapat dimanfaatkan pimpinan untuk merancang blueprint inkubasi bakat.</p>
             </div>
         </div>
-        <hr class="my-2 border-secondary" style="opacity: 0.15;">
-        <div class="text-end text-muted italic" style="font-size: 10px;">
-            *Formulasi Rekomendasi Taksonomi Kampus Tasikmalaya diproses otomatis melalui live database quisoener terintegrasi Gemini AI.
+
+        <div class="mt-3" style="font-size: 12.5px; line-height: 1.6; color: #212529;">
+            <h6 class="fw-bold text-primary mb-2">🚀 STRATEGIC MARKETING BLUEPRINT (Rekomendasi Taktis)</h6>
+            <div class="list-group list-group-flush small">
+                <div class="list-group-item px-0 py-2 bg-transparent border-0">
+                    🎯 <strong>Optimasi Saluran Informasi:</strong> Fokuskan alokasi anggaran marcom digital secara intensif pada kanal <strong>"<?= htmlspecialchars($modus_mengetahui); ?>"</strong> yang terbukti memiliki daya penetrasi tertinggi pada sebaran filter data ini.
+                </div>
+                <div class="list-group-item px-0 py-2 bg-transparent border-0">
+                    ⚔️ <strong>Event Penetration Counter:</strong> Adakan kegiatan inkubasi/workshop terarah berbasis komunitas <strong>"<?= htmlspecialchars($modus_organisasi); ?>"</strong> dengan mengangkat tema keahlian praktis di bidang <strong>"<?= htmlspecialchars($modus_minat); ?>"</strong> langsung di area basis pertahanan utama <strong><?= htmlspecialchars($modus_tinggal); ?></strong> guna mengunci data registrasi siswa sebelum diklaim kompetitor.
+                </div>
+            </div>
         </div>
+
+        <div class="mt-3">
+            <h6 class="fw-bold text-primary mb-2">📊 MATRIX ANALYSIS (SWOT)</h6>
+            <div class="row g-2" style="font-size: 11.5px;">
+                <div class="col-md-6">
+                    <div class="p-2 bg-white rounded border-start border-success border-3 h-100 shadow-sm">
+                        <strong class="text-success">💪 Strengths (Kekuatan)</strong><br>
+                        Daya pikat program bersandar pada keunggulan variabel nilai utama <strong>"<?= htmlspecialchars($modus_memilih); ?>"</strong> yang efektif menarik animo pendaftar.
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="p-2 bg-white rounded border-start border-info border-3 h-100 shadow-sm">
+                        <strong class="text-info">🚀 Opportunities (Peluang)</strong><br>
+                        Terdapat ceruk pasar potensial untuk mengonversi kegemaran siswa pada sub-sektor minat <strong>"<?= htmlspecialchars($modus_minat); ?>"</strong> menjadi angka pendaftar prodi rumpun IT terpadu.
+                    </div>
+                </div>
+            </div>
+        </div>
+
     </div>
     
     <div class="text-end no-print mb-4">
@@ -516,7 +523,6 @@ $opt_organisasi = mysqli_query($conn, "SELECT aktivitas_organisasi FROM tabel_qu
 
 </div>
 
-<!-- SCRIPT GENERATOR CHART.JS -->
 <?php if ($tab == 'analisa'): ?>
 <script>
 function createBarChart(canvasId, labelArray, dataArray, color) {

@@ -6,18 +6,24 @@ $filter = isset($_GET['filter']) ? mysqli_real_escape_string($conn, $_GET['filte
 $allowed_filters = ['tempat_tinggal', 'sekolah', 'beasiswa', 'jenis_beasiswa', 'memilih_ubsi', 'mengetahui_ubsi', 'minat_kompetensi', 'aktivitas_organisasi'];
 if (!in_array($filter, $allowed_filters)) { $filter = 'tempat_tinggal'; }
 
-// 1. Query Agregasi Data Grafik & Tabel Angka Uraian Akurat
-$query = "SELECT `$filter` AS label, COUNT(*) AS total FROM tabel_quisoner GROUP BY `$filter` ORDER BY total DESC";
+// 1. [PERBAIKAN] Query Agregasi Data Grafik & Tabel Menggunakan TRIM() Agar Tidak Duplikat Spasi
+$query = "SELECT TRIM(`$filter`) AS label, COUNT(*) AS total 
+          FROM tabel_quisoner 
+          GROUP BY TRIM(`$filter`) 
+          ORDER BY total DESC";
 $result = mysqli_query($conn, $query);
 $labels = []; $totals = []; $uraian_data = [];
+
 while ($row = mysqli_fetch_assoc($result)) {
-    $lbl = $row['label'] ? $row['label'] : 'Bukan Penerima Beasiswa';
+    // Penanganan jika field bernilai kosong atau null
+    $lbl = (!empty($row['label'])) ? $row['label'] : (($filter == 'beasiswa' || $filter == 'jenis_beasiswa') ? 'Bukan Penerima Beasiswa' : 'Tidak Mengisi');
+    
     $labels[] = $lbl;
     $totals[] = (int)$row['total'];
     $uraian_data[] = ['label' => $lbl, 'total' => (int)$row['total']];
 }
 
-// 2. [PERBAIKAN SINKRONISASI] Query Komponen Laporan Inteligensi Dinamis Lintas AI dari tabel_quisoner
+// 2. Query Komponen Laporan Inteligensi Dinamis Lintas AI dari tabel_quisoner
 $res_wilayah = mysqli_query($conn, "SELECT tempat_tinggal, COUNT(*) as jml FROM tabel_quisoner GROUP BY tempat_tinggal ORDER BY jml DESC");
 $wilayah_top = "Kota Tasikmalaya"; $wilayah_low = "Kabupaten Pangandaran";
 $arr_wilayah = [];
@@ -27,7 +33,6 @@ if(count($arr_wilayah) > 0) {
     $wilayah_low = $arr_wilayah[count($arr_wilayah)-1]['tempat_tinggal'];
 }
 
-// FIX: Menambahkan FROM tabel_quisoner agar tidak memicu fatal error
 $res_info = mysqli_query($conn, "SELECT mengetahui_ubsi, COUNT(*) as jml FROM tabel_quisoner GROUP BY mengetahui_ubsi ORDER BY jml DESC LIMIT 1");
 $info_top = ($res_info && mysqli_num_rows($res_info) > 0) ? mysqli_fetch_assoc($res_info)['mengetahui_ubsi'] : "Instagram UBSI Tasikmalaya";
 
@@ -199,7 +204,7 @@ $minat_top = ($res_minat && mysqli_num_rows($res_minat) > 0) ? mysqli_fetch_asso
                                         <tr><td class="text-center">6</td><td>STMIK DCI Tasikmalaya</td><td>Kota Tasikmalaya</td><td>Beasiswa Yayasan, KIP-K Swasta.</td><td>S1 Sistem Informasi & S1 TI</td><td>~140 Mahasiswa</td><td>S1 Sistem Informasi</td><td>Fokus mengandalkan program kuliah reguler sore hibrida khusus segmen pekerja.</td></tr>
                                         <tr><td class="text-center">7</td><td>STMIK Tasikmalaya (Restrukturisasi)</td><td>Kota Tasikmalaya</td><td>Beasiswa Ikatan Alumni, KIP-K Swasta.</td><td>S1 Sistem Informasi & S1 TI</td><td>~190 Mahasiswa</td><td>S1 Teknik Informatika</td><td>Mengunggulkan skema tarif angsuran SPP berkala tetap bagi kelas ekonomi menengah bawah.</td></tr>
                                         <tr><td class="text-center">8</td><td>STISIP Tasikmalaya</td><td>Kota Tasikmalaya</td><td>Beasiswa Aspirasi, KIP-K Swasta.</td><td>Non-IT (Sosial Politik)</td><td>0 Mahasiswa</td><td>S1 Ilmu Admin Negara</td><td>Membidik ceruk pasar peningkatan karir aparatur desa dan instansi daerah.</td></tr>
-                                        <tr><td class="text-center">9</td><td>STIE Yasa Anggana (Kampus Tasik)</td><td>Kota Tasikmalaya</td><td>Beasiswa Kemitraan Dagang, KIP-K.</td><td>Non-IT (Ekonomi)</td><td>0 Mahasiswa</td><td>S1 Manajemen Bisnis</td><td>Fokus mengemas kampanye kewirausahaan praktis bagi pelaku UMKM.</td></tr>
+                                        <tr><td class="text-center">9</td><td>STIE Yasa Anggana (Kampus Tasik)</td><td>Kota Tasikmalaya</td><td>Beasiswa Kemitraan Dagang, KIP-K.</td><td>Non-IT (Ekonomi)</td><td>0 Mahasiswa</td><td>S1 Manajemen Bisnis</td><td>Fokus mengmas kampanye kewirausahaan praktis bagi pelaku UMKM.</td></tr>
                                         <tr><td class="text-center">10</td><td>STAI Tasikmalaya</td><td>Kota Tasikmalaya</td><td>Beasiswa Tahfiz, KIP-K Kemenag.</td><td>Non-IT (Keagamaan)</td><td>0 Mahasiswa</td><td>S1 Pendidikan Agama Islam</td><td>Menyerap lulusan MA swasta pinggiran perkotaan lewat jalur keagamaan.</td></tr>
                                         <tr><td class="text-center">11</td><td>STAI Sabili Tasikmalaya</td><td>Kota Tasikmalaya</td><td>Beasiswa Lembaga, KIP-K Kemenag.</td><td>Non-IT (Keagamaan)</td><td>0 Mahasiswa</td><td>S1 Hukum Keluarga Islam</td><td>Mengamankan ceruk peminat profesi peradilan agama/syariah lokal.</td></tr>
 
@@ -275,15 +280,15 @@ $minat_top = ($res_minat && mysqli_num_rows($res_minat) > 0) ? mysqli_fetch_asso
                             <div class="list-group list-group-flush small">
                                 <div class="list-group-item px-0 py-3">
                                     🎯 <strong>1. Dominasi Anggaran Saluran Informasi Efektif (70% Budget Allocation):</strong><br>
-                                    Berdasarkan rekapitulasi data kuesioner riil pendaftar, saluran publikasi penentu konversi tertinggi diraih oleh kanal <strong>"<?= $info_top; ?>"</strong>. Pimpinan direkomendasikan menginstruksikan tim Marcom untuk memotong anggaran pembuatan media fisik (Baliho/Spanduk jalanan) sebesar 50%, lalu mengalihkan anggarannya menjadi 70% porsi penuh untuk optimasi iklan digital berbayar serta penguatan konten kreatif pada media penentu tersebut.
+                                    Berdasarkan rekapitulasi data kuesioner riil pendaftar, saluran publikasi penentu konversi tertinggi diraih oleh kanal <strong>"<?= htmlspecialchars($info_top); ?>"</strong>. Pimpinan direkomendasikan menginstruksikan tim Marcom untuk memotong anggaran pembuatan media fisik (Baliho/Spanduk jalanan) sebesar 50%, lalu mengalihkan anggarannya menjadi 70% porsi penuh untuk optimasi iklan digital berbayar serta penguatan konten kreatif pada media penentu tersebut.
                                 </div>
                                 <div class="list-group-item px-0 py-3">
                                     ⚔️ <strong>2. Taktik Pembendungan Pasar Berbasis Kompetensi Kreatif (Inbound Event Counter):</strong><br>
-                                    Guna membendung laju serapan prodi rumpun IT PTN (UNSIL) dan pergerakan lapangan agresif dari PTS pesaing utama (UNPER, UNIGAL, UNIGA) di wilayah basis pendaftar terbanyak kita (**<?= $wilayah_top; ?>**), UBSI harus menyerang lewat keunggulan segmentasi minat. Karena minat terbesar mahasiswa baru terfokus pada sub-sektor <strong>"<?= $minat_top; ?>"</strong>, UBSI wajib menyelenggarakan kompetisi digital kreatif rutin skala regional berhadiah voucher *Beasiswa Talenta Digital* langsung di kampus demi mengunci komitmen pendaftaran maba sebelum didahului kompetitor.
+                                    Guna membendung laju serapan prodi rumpun IT PTN (UNSIL) dan pergerakan lapangan agresif dari PTS pesaing utama (UNPER, UNIGAL, UNIGA) di wilayah basis pendaftar terbanyak kita (**<?= htmlspecialchars($wilayah_top); ?>**), UBSI harus menyerang lewat keunggulan segmentasi minat. Karena minat terbesar mahasiswa baru terfokus pada sub-sektor <strong>"<?= htmlspecialchars($minat_top); ?>"</strong>, UBSI wajib menyelenggarakan kompetisi digital kreatif rutin skala regional berhadiah voucher *Beasiswa Talenta Digital* langsung di kampus demi mengunci komitmen pendaftaran maba sebelum didahului kompetitor.
                                 </div>
                                 <div class="list-group-item px-0 py-3">
                                     📍 <strong>3. Kampanye Gerilya Wilayah Satelit Lemah (Geomarketing Penetration):</strong><br>
-                                    Data mendeteksi kontribusi pendaftaran maba paling tipis dan rentan berada di kawasan geografis <strong>"<?= $wilayah_low; ?>"</strong>. Strategi taktis PMB 2027 adalah menerjunkan satuan tugas marketing khusus untuk penetrasi ke sekolah-sekolah di wilayah satelit tersebut dengan membawa produk diferensiasi unggulan kita yaitu *Beasiswa Talenta Digital* dan beasiswa *Jalur Undangan* yang belum diterapkan secara masif oleh PTS konvensional setempat.
+                                    Data mendeteksi kontribusi pendaftaran maba paling tipis dan rentan berada di kawasan geografis <strong>"<?= htmlspecialchars($wilayah_low); ?>"</strong>. Strategi taktis PMB 2027 adalah menerjunkan satuan tugas marketing khusus untuk penetrasi ke sekolah-sekolah di wilayah satelit tersebut dengan membawa produk diferensiasi unggulan kita yaitu *Beasiswa Talenta Digital* dan beasiswa *Jalur Undangan* yang belum diterapkan secara masif oleh PTS konvensional setempat.
                                 </div>
                             </div>
                         </div>
@@ -294,19 +299,19 @@ $minat_top = ($res_minat && mysqli_num_rows($res_minat) > 0) ? mysqli_fetch_asso
                                 <div class="col-md-6">
                                     <div class="p-3 bg-light rounded border-start border-success border-4 h-100">
                                         <strong class="text-success">💪 Strengths (Kekuatan)</strong>
-                                        <p class="small text-muted mt-2 mb-0">Variabel pendorong utama eksternal mahasiswa menentukan pilihan kuliah di UBSI bersandar pada alasan <strong>"<?= $alasan_top; ?>"</strong>. Narasi keunggulan ini wajib dijadikan tajuk utama pada setiap halaman brosur digital promosi.</p>
+                                        <p class="small text-muted mt-2 mb-0">Variabel pendorong utama eksternal mahasiswa menentukan pilihan kuliah di UBSI bersandar pada alasan <strong>"<?= htmlspecialchars($alasan_top); ?>"</strong>. Narasi keunggulan ini wajib dijadikan tajuk utama pada setiap halaman brosur digital promosi.</p>
                                     </div>
                                 </div>
                                 <div class="col-md-6">
                                     <div class="p-3 bg-light rounded border-start border-danger border-4 h-100">
                                         <strong class="text-danger">⚠️ Weaknesses (Kelemahan)</strong>
-                                        <p class="small text-muted mt-2 mb-0">Adanya area hampa kontribusi sebaran maba baru di wilayah geografis <strong>"<?= $wilayah_low; ?>"</strong>. Mengindikasikan tim publikasi belum memiliki jejaring relasi emosional yang solid bersama institusi sekolah menengah atas di kawasan tersebut.</p>
+                                        <p class="small text-muted mt-2 mb-0">Adanya area hampa kontribusi sebaran maba baru di wilayah geografis <strong>"<?= htmlspecialchars($wilayah_low); ?>"</strong>. Mengindikasikan tim publikasi belum memiliki jejaring relasi emosional yang solid bersama institusi sekolah menengah atas di kawasan tersebut.</p>
                                     </div>
                                 </div>
                                 <div class="col-md-6">
                                     <div class="p-3 bg-light rounded border-start border-info border-4 h-100">
                                         <strong class="text-info">🚀 Opportunities (Peluang)</strong>
-                                        <p class="small text-muted mt-2 mb-0">Klaster minat terbesar responden tertuju kuat pada sub-kompetensi <strong>"<?= $minat_top; ?>"</strong>. Peluang emas bagi perguruan tinggi untuk mengonversi hobi digital anak muda ini menjadi angka pendaftar prodi rumpun IT terpadu.</p>
+                                        <p class="small text-muted mt-2 mb-0">Klaster minat terbesar responden tertuju kuat pada sub-kompetensi <strong>"<?= htmlspecialchars($minat_top); ?>"</strong>. Peluang emas bagi perguruan tinggi untuk mengonversi hobi digital anak muda ini menjadi angka pendaftar prodi rumpun IT terpadu.</p>
                                     </div>
                                 </div>
                                 <div class="col-md-6">

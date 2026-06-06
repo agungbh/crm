@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: localhost:3306
--- Generation Time: Jun 06, 2026 at 12:24 AM
+-- Generation Time: Jun 06, 2026 at 04:18 PM
 -- Server version: 8.0.30
 -- PHP Version: 8.3.12
 
@@ -239,7 +239,7 @@ INSERT INTO `tabel_quisoner` (`id`, `nim`, `nama`, `whatsapp`, `tempat_tinggal`,
 (12, '19260350', 'Deseu Pohaseu ', '082130459279', 'Kabupaten Ciamis', 'SMKS PGRI CIKONENG ', 'Ya', 'Beasiswa Jalur Undangan', 'Rekomendasi Guru BK', 'Mahasiswa UBSI', 'Olah Raga', 'Pencinta Alam', '2026-05-25 20:47:49'),
 (13, '19260248', 'Budi Wahyu', '085801224137', 'Kota Tasikmalaya', 'SMAN 10 TASIKMALAYA ', 'Ya', 'Beasiswa Jalur Undangan', 'Beasiswa', 'Guru BK', 'Olah Raga', 'Musik', '2026-05-25 20:50:35'),
 (14, '19260308', 'LIVA', '085722320460', 'Kabupaten Ciamis', 'SMKN 1 KAWALI', 'Ya', 'Beasiswa Jalur Undangan', 'Beasiswa', 'Guru BK', 'Editing Video', 'OSIS', '2026-05-25 20:51:06'),
-(15, '19260728', 'Mita putri cahyadi', '082120029596', 'Kabupaten Tasikmalaya', 'SMKN 3 TASIKMALAYA', 'Ya', 'Beasiswa Jalur Undangan', 'Akreditasi Unggul', 'Guru BK', 'Selebgram', 'Pencinta Alam', '2026-05-25 20:54:16'),
+(15, '19260728', 'Mita Putri Cahyadi', '082120029596', 'Kabupaten Tasikmalaya', 'SMKN 3 TASIKMALAYA', 'Ya', 'Beasiswa Jalur Undangan', 'Akreditasi Unggul', 'Guru BK', 'Selebgram', 'Pencinta Alam', '2026-05-25 20:54:16'),
 (16, '19260684', 'Ghaitsa Mutiara Ardianti ', '081958048378', 'Kota Tasikmalaya', 'SMKN 1 TASIKMALAYA ', 'Ya', 'Beasiswa Jalur Undangan', 'Beasiswa', 'Orang Tua', 'Live Streaming', 'Tari', '2026-05-25 20:54:43'),
 (17, '19260505', 'Liony Lee Vista', '082162212424', 'Kota Tasikmalaya', 'SMKN 4 TASIKMALAYA', 'Tidak', NULL, 'Biaya Terjangkau', 'Brosur', 'Olah Raga', 'Bahasa', '2026-05-25 20:58:47'),
 (18, '19260656', 'Ade Sofyan Irfani ', '085185691357', 'Kabupaten Tasikmalaya', 'SMKS YPC TASIKMALAYA', 'Ya', 'Beasiswa Jalur Undangan', 'Beasiswa', 'Tiktok UBSI Tasikmalaya', 'Olah Raga', 'Bahasa', '2026-05-25 21:04:25'),
@@ -277,7 +277,8 @@ INSERT INTO `tabel_quisoner` (`id`, `nim`, `nama`, `whatsapp`, `tempat_tinggal`,
 (52, '19260903', 'Yunita dewi', '081224579613', 'Kota Tasikmalaya', 'SMAN 4 Tasikmalaya', 'Tidak', NULL, 'Biaya Terjangkau', 'Instagram UBSI Tasikmalaya', 'Selebgram', 'Tari', '2026-06-04 02:28:44'),
 (53, '19260798', 'Fajri Nuril Hidayat', '083116726113', 'Kota Tasikmalaya', 'SMKN 2 TASIKMALAYA', 'Tidak', NULL, 'Biaya Terjangkau', 'Teman', 'Olah Raga', 'Karang Taruna', '2026-06-04 02:29:01'),
 (54, '19260896', 'Raffy Pramana', '081285219424', 'Kota Tasikmalaya', 'SMAT RIYADLUL ULUM WADDA\'WAH CONDONG', 'Tidak', NULL, 'Akreditasi Unggul', 'Alumni UBSI', 'Editing Photo', 'Musik', '2026-06-04 03:56:19'),
-(55, '19260972', 'Muhammad Rizki', '085771802881', 'Kota Tasikmalaya', 'SMKN 1 TASIKMALAYA', 'Ya', 'Beasiswa Jalur Undangan', 'Beasiswa', 'Guru BK', 'Editing Video', 'Musik', '2026-06-05 07:23:00');
+(55, '19260972', 'Muhammad Rizki', '085771802881', 'Kota Tasikmalaya', 'SMKN 1 TASIKMALAYA', 'Ya', 'Beasiswa Jalur Undangan', 'Beasiswa', 'Guru BK', 'Editing Video', 'Musik', '2026-06-05 07:23:00'),
+(56, '19260970', 'ATHALA KHANSA MIRAJ', '081288472073', 'Kota Tasikmalaya', 'SMAS TERPADU RIYADLUL ULUM', 'Tidak', NULL, 'Akreditasi Unggul', 'Orang Tua', 'Olah Raga', 'Pencinta Alam', '2026-06-06 00:40:39');
 
 -- --------------------------------------------------------
 
@@ -350,7 +351,7 @@ ALTER TABLE `tabel_event`
 -- AUTO_INCREMENT for table `tabel_quisoner`
 --
 ALTER TABLE `tabel_quisoner`
-  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=92;
+  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=93;
 COMMIT;
 
 /*!40101 SET CHARACTER_SET_CLIENT=@OLD_CHARACTER_SET_CLIENT */;
